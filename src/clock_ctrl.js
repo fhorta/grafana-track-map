@@ -14,6 +14,27 @@ var highlightedMarker = null
 var timeSrv
 
 
+
+var cfg = {
+  // radius should be small ONLY if scaleRadius is true (or small radius is intended)
+  // if scaleRadius is false it will be the constant radius used in pixels
+  "radius": 2,
+  "maxOpacity": .8,
+  // scales the radius based on map zoom
+  "scaleRadius": true,
+  // if set to false the heatmap uses the global maximum for colorization
+  // if activated: uses the data maximum within the current map boundaries
+  //   (there will always be a red spot with useLocalExtremas true)
+  "useLocalExtrema": true,
+  // which field name in your data represents the latitude - default "lat"
+  latField: 'lat',
+  // which field name in your data represents the longitude - default "lng"
+  lngField: 'lng',
+  // which field name in your data represents the data value - default "value"
+  valueField: 'count'
+};
+
+
 export class ClockCtrl extends MetricsPanelCtrl {
   constructor($scope, $injector) {
     super($scope, $injector);
@@ -90,13 +111,16 @@ export class ClockCtrl extends MetricsPanelCtrl {
       var center = coords.find(point => point.position)
       center = center ? center.position : [0, 0]
       myMap = L.map('themap')
-      myMap.fitBounds([[minLat, minLon],
+      var fix = 0.000000000001;
+      myMap.fitBounds([[minLat+fix, minLon+fix],
             [maxLat, maxLon]])
       var CartoDB_PositronNoLabels = L.tileLayer('http://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="http://cartodb.com/attributions">CartoDB</a>',
         subdomains: 'abcd',
         maxZoom: 19
       })
+
+     //var heatmapLayer = new HeatmapOverlay(cfg);
 
       myMap.on("boxzoomend", function(e) {
         const coordsInBox = coords.filter(coord =>

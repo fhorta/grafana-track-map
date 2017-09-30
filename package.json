@@ -35,7 +35,7 @@
   },
   "dependencies": {
     "angular-google-maps": "^2.4.0",
-    "leaflet": "^1.0.2",
+    "leaflet": "1.0.3",
     "lodash": "~4.0.0",
     "moment": "^2.12.0"
   }
