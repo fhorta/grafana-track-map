@@ -1,7 +1,7 @@
 import LL from './leaflet.js';
 import _ from 'lodash';
 import moment from 'moment';
-import HeatmapJS from './heatmap.js';
+import h337 from './heatmap.js'
 import HeatmapOverlay from './leaflet-heatmap.js';
 import './css/clock-panel.css!';
 import './leaflet.css!';
