@@ -35,6 +35,7 @@
   },
   "dependencies": {
     "angular-google-maps": "^2.4.0",
+    "heatmap.js": "^2.0.5",
     "leaflet": "1.0.3",
     "lodash": "~4.0.0",
     "moment": "^2.12.0"
