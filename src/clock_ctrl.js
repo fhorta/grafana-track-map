@@ -1,19 +1,19 @@
-import LL from './leaflet.js';
+import L from './leaflet.js';
 import _ from 'lodash';
 import moment from 'moment';
 import h337 from './heatmap.js'
 import HeatmapOverlay from './leaflet-heatmap.js';
 import './css/clock-panel.css!';
 import './leaflet.css!';
-import {
-    MetricsPanelCtrl
-} from 'app/plugins/sdk';
+import { MetricsPanelCtrl } from 'app/plugins/sdk';
 import appEvents from 'app/core/app_events';
 
 var myMap;
 var coords = [];
 var highlightedMarker = null;
 var timeSrv;
+
+// test 4!
 
 export class ClockCtrl extends MetricsPanelCtrl {
   constructor($scope, $injector) {

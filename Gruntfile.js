@@ -3,6 +3,7 @@ module.exports = (grunt) => {
 
   grunt.loadNpmTasks('grunt-execute');
   grunt.loadNpmTasks('grunt-contrib-clean');
+  grunt.loadNpmTasks('grunt-service');
 
   grunt.initConfig({
 
@@ -37,11 +38,18 @@ module.exports = (grunt) => {
     watch: {
       rebuild_all: {
         files: ['src/**/*', 'plugin.json'],
-        tasks: ['default'],
+        tasks: ['default', 'service:restart'],
         options: {
-          spawn: false
+          spawn: false,
+          interrupt: true
         }
       },
+    },
+
+    service: {
+        restart: {
+            shellCommand: 'sudo service grafana-server restart'
+        },
     },
 
     babel: {

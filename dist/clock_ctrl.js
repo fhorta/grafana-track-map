@@ -1,9 +1,9 @@
 'use strict';
 
-System.register(['./leaflet.js', 'lodash', 'moment', 'heatmap.js/build/heatmap.js', './leaflet-heatmap.js', './css/clock-panel.css!', './leaflet.css!', 'app/plugins/sdk', 'app/core/app_events'], function (_export, _context) {
+System.register(['./leaflet.js', 'lodash', 'moment', './heatmap.js', './leaflet-heatmap.js', './css/clock-panel.css!', './leaflet.css!', 'app/plugins/sdk', 'app/core/app_events'], function (_export, _context) {
   "use strict";
 
-  var LL, _, moment, h337, HeatmapOverlay, MetricsPanelCtrl, appEvents, _createClass, myMap, coords, highlightedMarker, timeSrv, ClockCtrl, Geohash;
+  var L, _, moment, h337, HeatmapOverlay, MetricsPanelCtrl, appEvents, _createClass, myMap, coords, highlightedMarker, timeSrv, ClockCtrl, Geohash;
 
   function _classCallCheck(instance, Constructor) {
     if (!(instance instanceof Constructor)) {
@@ -37,13 +37,13 @@ System.register(['./leaflet.js', 'lodash', 'moment', 'heatmap.js/build/heatmap.j
 
   return {
     setters: [function (_leafletJs) {
-      LL = _leafletJs.default;
+      L = _leafletJs.default;
     }, function (_lodash) {
       _ = _lodash.default;
     }, function (_moment) {
       moment = _moment.default;
-    }, function (_heatmapJsBuildHeatmapJs) {
-      h337 = _heatmapJsBuildHeatmapJs.default;
+    }, function (_heatmapJs) {
+      h337 = _heatmapJs.default;
     }, function (_leafletHeatmapJs) {
       HeatmapOverlay = _leafletHeatmapJs.default;
     }, function (_cssClockPanelCss) {}, function (_leafletCss) {}, function (_appPluginsSdk) {
