@@ -1,9 +1,9 @@
 'use strict';
 
-System.register(['./leaflet.js', './css/clock-panel.css!', './leaflet.css!', 'app/plugins/sdk', 'app/core/app_events', './realworld-10000.js', './leaflet-heat.js'], function (_export, _context) {
+System.register(['./leaflet.js', './css/clock-panel.css!', './leaflet.css!', 'app/plugins/sdk', 'app/core/app_events', './leaflet-heat.js'], function (_export, _context) {
     "use strict";
 
-    var MetricsPanelCtrl, appEvents, _createClass, myMap, coords, highlightedMarker, timeSrv, ClockCtrl, Geohash;
+    var MetricsPanelCtrl, appEvents, _createClass, myMap, coords, highlightedMarker, timeSrv, heatLayer, heatOpts, ClockCtrl, Geohash;
 
     function _classCallCheck(instance, Constructor) {
         if (!(instance instanceof Constructor)) {
@@ -87,7 +87,7 @@ System.register(['./leaflet.js', './css/clock-panel.css!', './leaflet.css!', 'ap
             MetricsPanelCtrl = _appPluginsSdk.MetricsPanelCtrl;
         }, function (_appCoreApp_events) {
             appEvents = _appCoreApp_events.default;
-        }, function (_realworld10000Js) {}, function (_leafletHeatJs) {}],
+        }, function (_leafletHeatJs) {}],
         execute: function () {
             _createClass = function () {
                 function defineProperties(target, props) {
@@ -109,6 +109,16 @@ System.register(['./leaflet.js', './css/clock-panel.css!', './leaflet.css!', 'ap
 
             coords = [];
             highlightedMarker = null;
+            heatOpts = {
+                radius: 20,
+                minOpacity: 0,
+                maxZoom: 18,
+                max: 600,
+                blur: 15,
+                gradient: { 0.4: 'blue', 0.65: 'lime', 1: 'red' }
+
+                //import './realworld-10000.js';
+            };
 
             _export('ClockCtrl', ClockCtrl = function (_MetricsPanelCtrl) {
                 _inherits(ClockCtrl, _MetricsPanelCtrl);
@@ -159,8 +169,13 @@ System.register(['./leaflet.js', './css/clock-panel.css!', './leaflet.css!', 'ap
                         var polylines = [];
                         var polyline = [];
                         var lastLineHasData = false;
-                        for (var i = 0; i < data[0].datapoints.length; i++) {
-                            var position = data[1].datapoints[i][0] ? Geohash.decode(data[1].datapoints[i][0]) : null;
+
+                        if (data[0] === undefined) {
+                            return false;
+                        }
+
+                        for (var i = 0; i < data[0].rows.length; i++) {
+                            var position = data[0].rows[i][1] ? Geohash.decode(data[0].rows[i][1]) : null;
                             if (position) {
                                 minLat = Math.min(minLat, position.lat);
                                 minLon = Math.min(minLon, position.lng);
@@ -176,10 +191,10 @@ System.register(['./leaflet.js', './css/clock-panel.css!', './leaflet.css!', 'ap
                                 }
                             }
                             coords.push({
-                                value: data[0].datapoints[i][0],
-                                hash: data[1].datapoints[i][0],
+                                value: data[0].rows[i][2],
+                                hash: data[0].rows[i][1],
                                 position: position,
-                                timestamp: data[0].datapoints[i][1]
+                                timestamp: data[0].rows[i][0]
                             });
                         }
 
@@ -200,8 +215,14 @@ System.register(['./leaflet.js', './css/clock-panel.css!', './leaflet.css!', 'ap
                         var fix = 0.000000000001;
                         myMap.fitBounds([[minLat + fix, minLon + fix], [maxLat, maxLon]]);
 
-                        var tiles = L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
-                            attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+                        //var tiles = L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
+                        //attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
+                        //}).addTo(myMap);
+
+                        var tiles = L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', {
+                            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="http://cartodb.com/attributions">CartoDB</a>',
+                            subdomains: 'abcd',
+                            maxZoom: 20
                         }).addTo(myMap);
 
                         var scale = function scale(opts) {
@@ -230,14 +251,8 @@ System.register(['./leaflet.js', './css/clock-panel.css!', './leaflet.css!', 'ap
                         data = coords.map(function (p) {
                             return [p.position.lat, p.position.lng, p.value];
                         });
-                        var heat = L.heatLayer(data, {
-                            radius: 30,
-                            minOpacity: 0,
-                            maxZoom: 18,
-                            max: 1,
-                            blur: 15,
-                            gradient: { 0.4: 'blue', 0.65: 'lime', 1: 'red' }
-                        }).addTo(myMap);
+
+                        heatLayer = L.heatLayer(data, heatOpts).addTo(myMap);
 
                         myMap.on('boxzoomend', function (e) {
                             var coordsInBox = coords.filter(function (coord) {
@@ -266,7 +281,7 @@ System.register(['./leaflet.js', './css/clock-panel.css!', './leaflet.css!', 'ap
                 _createClass(ClockCtrl, [{
                     key: 'onInitEditMode',
                     value: function onInitEditMode() {
-                        this.addEditorTab('Options', 'public/plugins/grafana-clock-panel/editor.html', 2);
+                        this.addEditorTab('Options', 'public/plugins/grafana-map-panel/editor.html', 2);
                     }
                 }, {
                     key: 'onPanelTeardown',
@@ -280,12 +295,9 @@ System.register(['./leaflet.js', './css/clock-panel.css!', './leaflet.css!', 'ap
 
                         this.events.on('render', function () {
                             var $panelContainer = elem.find('.panel-container');
-
-                            if (_this2.panel.bgColor) {
-                                $panelContainer.css('background-color', _this2.panel.bgColor);
-                            } else {
-                                $panelContainer.css('background-color', '');
-                            }
+                            heatOpts.gradient = { 0.4: _this2.panel.grad.c0, 0.65: _this2.panel.grad.c1, 1: _this2.panel.grad.c2 };
+                            heatLayer.setOptions(heatOpts);
+                            heatLayer.redraw();
                         });
                     }
                 }]);

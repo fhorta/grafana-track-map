@@ -11,7 +11,17 @@ var coords = [];
 var highlightedMarker = null;
 var timeSrv;
 
-import './realworld-10000.js';
+var heatLayer;
+var heatOpts = {
+    radius:20,
+    minOpacity: 0,
+    maxZoom: 18,
+    max: 600,
+    blur: 15,
+    gradient: {0.4: 'blue', 0.65: 'lime', 1: 'red'}
+}
+
+//import './realworld-10000.js';
 import './leaflet-heat.js';
 //import {h337} from './heatmap.js'
 //import {HeatmapOverlay} from './leaflet-heatmap.js';
@@ -61,9 +71,14 @@ export class ClockCtrl extends MetricsPanelCtrl {
             var polylines = [];
             var polyline = [];
             var lastLineHasData = false;
-            for (var i = 0; i < data[0].datapoints.length; i++) {
-                const position = data[1].datapoints[i][0] ?
-                    Geohash.decode(data[1].datapoints[i][0]) :
+
+            if (data[0]===undefined){
+                return false;
+            }
+
+            for (var i = 0; i < data[0].rows.length; i++) {
+                const position = data[0].rows[i][1] ?
+                    Geohash.decode(data[0].rows[i][1]) :
                     null;
                 if (position) {
                     minLat = Math.min(minLat, position.lat);
@@ -80,10 +95,10 @@ export class ClockCtrl extends MetricsPanelCtrl {
                     }
                 }
                 coords.push({
-                    value: data[0].datapoints[i][0],
-                    hash: data[1].datapoints[i][0],
+                    value: data[0].rows[i][2],
+                    hash: data[0].rows[i][1],
                     position: position,
-                    timestamp: data[0].datapoints[i][1]
+                    timestamp: data[0].rows[i][0]
                 });
             }
 
@@ -105,8 +120,14 @@ export class ClockCtrl extends MetricsPanelCtrl {
                 [maxLat, maxLon]
             ]);
 
-            var tiles = L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
+            //var tiles = L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
+                //attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
+            //}).addTo(myMap);
+
+            var tiles = L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="http://cartodb.com/attributions">CartoDB</a>',
+                subdomains: 'abcd',
+                maxZoom: 20
             }).addTo(myMap);
 
             var scale = function(opts){
@@ -133,14 +154,8 @@ export class ClockCtrl extends MetricsPanelCtrl {
             //console.log("Gradient: ", mgradient);
 
             data = coords.map(function (p) { return [p.position.lat, p.position.lng, p.value]; });
-            var heat = L.heatLayer(data, {
-                radius:30,
-                minOpacity: 0,
-                maxZoom: 18,
-                max: 1,
-                blur: 15,
-                gradient: {0.4: 'blue', 0.65: 'lime', 1: 'red'},
-            }).addTo(myMap);
+
+            heatLayer = L.heatLayer(data, heatOpts).addTo(myMap);
 
             myMap.on('boxzoomend', function (e) {
                 const coordsInBox = coords.filter(
@@ -172,11 +187,7 @@ export class ClockCtrl extends MetricsPanelCtrl {
     }
 
     onInitEditMode() {
-        this.addEditorTab(
-            'Options',
-            'public/plugins/grafana-clock-panel/editor.html',
-            2
-        );
+        this.addEditorTab( 'Options', 'public/plugins/grafana-map-panel/editor.html', 2);
     }
 
     onPanelTeardown() {
@@ -186,12 +197,9 @@ export class ClockCtrl extends MetricsPanelCtrl {
     link(scope, elem) {
         this.events.on('render', () => {
             const $panelContainer = elem.find('.panel-container');
-
-            if (this.panel.bgColor) {
-                $panelContainer.css('background-color', this.panel.bgColor);
-            } else {
-                $panelContainer.css('background-color', '');
-            }
+            heatOpts.gradient = {0.4: this.panel.grad.c0, 0.65: this.panel.grad.c1, 1: this.panel.grad.c2};
+            heatLayer.setOptions(heatOpts);
+            heatLayer.redraw();
         });
     }
 }
@@ -325,8 +333,3 @@ function generateColor(colorStart,colorEnd,colorCount){
     }
     return ret;
 }
-
-
-
-
-
