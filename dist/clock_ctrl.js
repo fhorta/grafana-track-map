@@ -1,9 +1,9 @@
 'use strict';
 
-System.register(['./leaflet.js', './css/clock-panel.css!', './leaflet.css!', 'app/plugins/sdk', 'app/core/app_events', './leaflet-heat.js'], function (_export, _context) {
+System.register(['./leaflet.js', 'lodash', './css/clock-panel.css!', './leaflet.css!', 'app/plugins/sdk', 'app/core/app_events', './leaflet-heat.js', './leaflet-sync.js'], function (_export, _context) {
     "use strict";
 
-    var MetricsPanelCtrl, appEvents, _createClass, myMap, coords, highlightedMarker, timeSrv, heatLayer, heatOpts, ClockCtrl, Geohash;
+    var _, MetricsPanelCtrl, appEvents, _createClass, map_ctrl, heatOpts, panelDefaults, ClockCtrl, Geohash;
 
     function _classCallCheck(instance, Constructor) {
         if (!(instance instanceof Constructor)) {
@@ -33,6 +33,52 @@ System.register(['./leaflet.js', './css/clock-panel.css!', './leaflet.css!', 'ap
             }
         });
         if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
+    }
+
+    function guid() {
+        function s4() {
+            return Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
+        }
+        return s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() + s4() + s4();
+    }
+
+    function loadGradient(gradient) {
+        var ret = {};
+        var values = [gradient.c0.v, gradient.c1.v, gradient.c2.v];
+        ret[values[0]] = gradient.c0.c;
+        ret[values[1]] = gradient.c1.c;
+        ret[values[2]] = gradient.c2.c;
+        return ret;
+    }
+
+    //import {h337} from './heatmap.js'
+    //import {HeatmapOverlay} from './leaflet-heatmap.js';
+    //
+
+    function syncMaps() {
+        //console.log(map_ctrl);
+        var map_list = [];
+        for (var k in map_ctrl) {
+            if (map_ctrl.hasOwnProperty(k)) {
+                map_list.push(map_ctrl[k]);
+            }
+        }
+        //console.log(map_list);
+
+        if (map_list.length > 1) {
+            var combos = [];
+            for (var i = 0; i < map_list.length; i++) {
+                for (var j = i + 1; j < map_list.length; j++) {
+                    combos.push([map_list[i], map_list[j]]);
+                }
+            } //console.log("Combos: ", combos.length);
+            for (var m in combos) {
+                var A = combos[m][0];
+                var B = combos[m][1];
+                A.sync(B);
+                B.sync(A);
+            }
+        }
     }
 
     function hex(c) {
@@ -83,11 +129,13 @@ System.register(['./leaflet.js', './css/clock-panel.css!', './leaflet.css!', 'ap
         return ret;
     }
     return {
-        setters: [function (_leafletJs) {}, function (_cssClockPanelCss) {}, function (_leafletCss) {}, function (_appPluginsSdk) {
+        setters: [function (_leafletJs) {}, function (_lodash) {
+            _ = _lodash.default;
+        }, function (_cssClockPanelCss) {}, function (_leafletCss) {}, function (_appPluginsSdk) {
             MetricsPanelCtrl = _appPluginsSdk.MetricsPanelCtrl;
         }, function (_appCoreApp_events) {
             appEvents = _appCoreApp_events.default;
-        }, function (_leafletHeatJs) {}],
+        }, function (_leafletHeatJs) {}, function (_leafletSyncJs) {}],
         execute: function () {
             _createClass = function () {
                 function defineProperties(target, props) {
@@ -107,8 +155,7 @@ System.register(['./leaflet.js', './css/clock-panel.css!', './leaflet.css!', 'ap
                 };
             }();
 
-            coords = [];
-            highlightedMarker = null;
+            map_ctrl = {};
             heatOpts = {
                 radius: 20,
                 minOpacity: 0,
@@ -116,8 +163,14 @@ System.register(['./leaflet.js', './css/clock-panel.css!', './leaflet.css!', 'ap
                 max: 600,
                 blur: 15,
                 gradient: { 0.4: 'blue', 0.65: 'lime', 1: 'red' }
-
-                //import './realworld-10000.js';
+            };
+            panelDefaults = {
+                'heatOpts': heatOpts,
+                'gradient': {
+                    c0: { c: 'blue', v: 0.4 },
+                    c1: { c: 'red', v: 0.64 },
+                    c2: { c: 'lime', v: 1 }
+                }
             };
 
             _export('ClockCtrl', ClockCtrl = function (_MetricsPanelCtrl) {
@@ -126,36 +179,48 @@ System.register(['./leaflet.js', './css/clock-panel.css!', './leaflet.css!', 'ap
                 function ClockCtrl($scope, $injector) {
                     _classCallCheck(this, ClockCtrl);
 
+                    var myMap;
+                    var coords = [];
+                    var highlightedMarker = null;
+                    var timeSrv;
+
                     var _this = _possibleConstructorReturn(this, (ClockCtrl.__proto__ || Object.getPrototypeOf(ClockCtrl)).call(this, $scope, $injector));
 
                     timeSrv = $injector.get('timeSrv');
-                    _this.panel.maxDataPoints = 500;
-                    var dashboard = _this.dashboard;
-                    //
-                    // don't forget to include leaflet-heatmap.js
+                    _this.panel.maxDataPoints = 10000;
 
-                    appEvents.on('graph-hover', function (event) {
-                        if (coords) {
-                            for (var i = 0; i < coords.length; i++) {
-                                if (coords[i].timestamp >= event.pos.x) {
-                                    if (coords[i].circle) {
-                                        coords[i].circle.setStyle({
-                                            fillColor: 'red',
-                                            color: 'red'
-                                        });
-                                    }
-                                    if (highlightedMarker) {
-                                        highlightedMarker.setStyle({
-                                            fillColor: 'none',
-                                            color: 'none'
-                                        });
-                                    }
-                                    highlightedMarker = coords[i].circle;
-                                    break;
-                                }
-                            }
-                        }
-                    });
+                    var mapId = String(guid()) + "_map";
+
+                    _this.panel.mapId = mapId;
+
+                    _.defaults(_this.panel, panelDefaults);
+                    var heatOpts = _this.panel.heatOpts;
+                    heatOpts.gradient = loadGradient(_this.panel.gradient);
+
+                    var dashboard = _this.dashboard;
+
+                    //appEvents.on('graph-hover', event => {
+                    //if (coords) {
+                    //for (var i = 0; i < coords.length; i++) {
+                    //if (coords[i].timestamp >= event.pos.x) {
+                    //if (coords[i].circle) {
+                    //coords[i].circle.setStyle({
+                    //fillColor: 'red',
+                    //color: 'red'
+                    //});
+                    //}
+                    //if (highlightedMarker) {
+                    //highlightedMarker.setStyle({
+                    //fillColor: 'none',
+                    //color: 'none'
+                    //});
+                    //}
+                    //highlightedMarker = coords[i].circle;
+                    //break;
+                    //}
+                    //}
+                    //}
+                    //});
 
                     _this.events.on('init-edit-mode', _this.onInitEditMode.bind(_this));
                     _this.events.on('panel-teardown', _this.onPanelTeardown.bind(_this));
@@ -170,32 +235,30 @@ System.register(['./leaflet.js', './css/clock-panel.css!', './leaflet.css!', 'ap
                         var polyline = [];
                         var lastLineHasData = false;
 
-                        if (data[0] === undefined) {
-                            return false;
-                        }
-
-                        for (var i = 0; i < data[0].rows.length; i++) {
-                            var position = data[0].rows[i][1] ? Geohash.decode(data[0].rows[i][1]) : null;
-                            if (position) {
-                                minLat = Math.min(minLat, position.lat);
-                                minLon = Math.min(minLon, position.lng);
-                                maxLat = Math.max(maxLat, position.lat);
-                                maxLon = Math.max(maxLon, position.lng);
-                                polyline.push(position);
-                                lastLineHasData = true;
-                            } else {
-                                if (lastLineHasData) {
-                                    polylines.push(polyline);
-                                    polyline = [];
-                                    lastLineHasData = false;
+                        if (data[0] != undefined) {
+                            for (var i = 0; i < data[0].rows.length; i++) {
+                                var position = data[0].rows[i][1] ? Geohash.decode(data[0].rows[i][1]) : null;
+                                if (position) {
+                                    minLat = Math.min(minLat, position.lat);
+                                    minLon = Math.min(minLon, position.lng);
+                                    maxLat = Math.max(maxLat, position.lat);
+                                    maxLon = Math.max(maxLon, position.lng);
+                                    polyline.push(position);
+                                    lastLineHasData = true;
+                                } else {
+                                    if (lastLineHasData) {
+                                        polylines.push(polyline);
+                                        polyline = [];
+                                        lastLineHasData = false;
+                                    }
                                 }
+                                coords.push({
+                                    value: data[0].rows[i][2],
+                                    hash: data[0].rows[i][1],
+                                    position: position,
+                                    timestamp: data[0].rows[i][0]
+                                });
                             }
-                            coords.push({
-                                value: data[0].rows[i][2],
-                                hash: data[0].rows[i][1],
-                                position: position,
-                                timestamp: data[0].rows[i][0]
-                            });
                         }
 
                         if (lastLineHasData) {
@@ -211,9 +274,22 @@ System.register(['./leaflet.js', './css/clock-panel.css!', './leaflet.css!', 'ap
                         });
                         center = center ? center.position : [0, 0];
 
-                        myMap = L.map('themap');
+                        myMap = L.map(mapId);
                         var fix = 0.000000000001;
-                        myMap.fitBounds([[minLat + fix, minLon + fix], [maxLat, maxLon]]);
+
+                        map_ctrl[mapId] = myMap;
+
+                        if (data[0] != undefined) {
+                            myMap.setView(new L.LatLng(40.730610, -73.935242), 18);
+                        } else {
+                            myMap.setView(new L.LatLng(center[0], center[1]), 18);
+                        }
+
+                        //console.log("data: ", data);
+                        //console.log(": ", coords.length);
+                        //console.log("maps: ",Object.keys(map_ctrl).length, map_ctrl);
+
+                        myMap.fitBounds([[minLat + fix, minLon + fix], [maxLat + fix, maxLon + fix]]);
 
                         //var tiles = L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
                         //attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
@@ -225,56 +301,61 @@ System.register(['./leaflet.js', './css/clock-panel.css!', './leaflet.css!', 'ap
                             maxZoom: 20
                         }).addTo(myMap);
 
-                        var scale = function scale(opts) {
-                            var istart = opts.domain[0],
-                                istop = opts.domain[1],
-                                ostart = opts.range[0],
-                                ostop = opts.range[1];
-                            return function scale(value) {
-                                return ostart + (ostop - ostart) * ((value - istart) / (istop - istart));
-                            };
-                        };
+                        //var scale = function(opts){
+                        //var istart = opts.domain[0],
+                        //istop  = opts.domain[1],
+                        //ostart = opts.range[0],
+                        //ostop  = opts.range[1];
+                        //return function scale(value) {
+                        //return ostart + (ostop - ostart) * ((value - istart) / (istop - istart));
+                        //}
+                        //};
 
-                        var nscale = 10;
-                        var mscale = scale({ domain: [0, nscale], range: [0, 1] });
-                        var mgradient = {};
-                        var inc = 0;
-                        var mcolors = generateColor('#111111', '#6495ED', nscale);
+                        //var nscale=10;
+                        //var mscale = scale({domain:[0,nscale],range:[0,1]});
+                        //var mgradient = {};
+                        //var inc = 0;
+                        //var mcolors = generateColor('#111111','#6495ED',nscale);
 
-                        mcolors.map(function (c) {
-                            mgradient[mscale(inc)] = "#" + String(mcolors[inc]);
-                            inc += 1;
-                        });
-
-                        //console.log("Gradient: ", mgradient);
+                        //mcolors.map(function (c) {
+                        //mgradient[mscale(inc)] = "#"+String(mcolors[inc]);
+                        //inc+=1;
+                        //})
 
                         data = coords.map(function (p) {
                             return [p.position.lat, p.position.lng, p.value];
                         });
 
-                        heatLayer = L.heatLayer(data, heatOpts).addTo(myMap);
+                        var heatLayer = L.heatLayer(data, heatOpts).addTo(myMap);
 
-                        myMap.on('boxzoomend', function (e) {
-                            var coordsInBox = coords.filter(function (coord) {
-                                return coord.position && e.boxZoomBounds.contains(L.latLng(coord.position.lat, coord.position.lng));
-                            });
-                            var minTime = Math.min.apply(Math, coordsInBox.map(function (coord) {
-                                return coord.timestamp;
-                            }));
-                            var maxTime = Math.max.apply(Math, coordsInBox.map(function (coord) {
-                                return coord.timestamp;
-                            }));
-                            console.log(new Date(minTime));
-                            console.log(new Date(maxTime));
-                            if (isFinite(minTime) && isFinite(maxTime)) {
-                                timeSrv.setTime({
-                                    from: moment.utc(minTime),
-                                    to: moment.utc(maxTime)
-                                });
-                            }
-                        });
+                        syncMaps();
+
+                        //myMap.on('boxzoomend', function (e) {
+                        //const coordsInBox = coords.filter(
+                        //coord =>
+                        //coord.position &&
+                        //e.boxZoomBounds.contains(
+                        //L.latLng(coord.position.lat, coord.position.lng)
+                        //)
+                        //);
+                        //const minTime = Math.min.apply(
+                        //Math,
+                        //coordsInBox.map(coord => coord.timestamp)
+                        //);
+                        //const maxTime = Math.max.apply(
+                        //Math,
+                        //coordsInBox.map(coord => coord.timestamp)
+                        //);
+                        //console.log(new Date(minTime));
+                        //console.log(new Date(maxTime));
+                        //if (isFinite(minTime) && isFinite(maxTime)) {
+                        //timeSrv.setTime({
+                        //from: moment.utc(minTime),
+                        //to: moment.utc(maxTime)
+                        //});
+                        //}
+                        //});
                     });
-
                     return _this;
                 }
 
@@ -287,6 +368,10 @@ System.register(['./leaflet.js', './css/clock-panel.css!', './leaflet.css!', 'ap
                     key: 'onPanelTeardown',
                     value: function onPanelTeardown() {
                         this.$timeout.cancel(this.nextTickPromise);
+                        //console.log("teardown: ", this);
+                        map_ctrl[this.panel.mapId].remove();
+                        delete map_ctrl[this.panel.mapId];
+                        syncMaps();
                     }
                 }, {
                     key: 'link',
@@ -294,10 +379,14 @@ System.register(['./leaflet.js', './css/clock-panel.css!', './leaflet.css!', 'ap
                         var _this2 = this;
 
                         this.events.on('render', function () {
-                            var $panelContainer = elem.find('.panel-container');
-                            heatOpts.gradient = { 0.4: _this2.panel.grad.c0, 0.65: _this2.panel.grad.c1, 1: _this2.panel.grad.c2 };
-                            heatLayer.setOptions(heatOpts);
-                            heatLayer.redraw();
+                            //const $panelContainer = elem.find('.panel-container');
+                            _this2.panel.heatOpts.gradient = loadGradient(_this2.panel.gradient);
+                            //console.log(this.panel.heatOpts);
+                            //console.log("link: ", Object.keys(scope.maps).length, scope.maps);
+                            //if (scope.maps[this.panel.mapId] != undefined) {
+                            //scope.maps[this.panel.mapId].setOptions(this.panel.heatOpts);
+                            //scope.maps[this.panel.mapId].redraw();
+                            //}
                         });
                     }
                 }]);
@@ -353,7 +442,6 @@ System.register(['./leaflet.js', './css/clock-panel.css!', './leaflet.css!', 'ap
                     var chr = geohash.charAt(i);
                     var idx = Geohash.base32.indexOf(chr);
                     if (idx == -1) throw new Error('Invalid geohash');
-
                     for (var n = 4; n >= 0; n--) {
                         var bitN = idx >> n & 1;
                         if (evenBit) {

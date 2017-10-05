@@ -1,7 +1,7 @@
 <div class="editor-row">
 
     <div class="section gf-form-group">
-        <h5 class="section-heading">Heatmap-Gradient options</h5>
+        <h5 class="section-heading">Gradient options</h5>
 
         <!--<div class="gf-form">-->
             <!--<label class="gf-form-label width-9">Clock Mode</label>-->
@@ -11,27 +11,71 @@
         <!--</div>-->
 
         <div class="gf-form">
-            <label class="gf-form-label width-9">From</label>
-            <span class="max-width-10">
-                <spectrum-picker class="gf-form-input" ng-model="ctrl.panel.grad.c0" ng-change="ctrl.render()" ></spectrum-picker>
+            <label class="gf-form-label width-5">From</label>
+            <span class="max-width-5">
+                <input type="text" class="input-small" ng-model="ctrl.panel.gradient.c0.v" ng-change="ctrl.render()" ng-model-onblur />
+            </span>
+            <span class="max-width-5">
+                <spectrum-picker class="gf-form-input" ng-model="ctrl.panel.gradient.c0.c" ng-change="ctrl.render()" ></spectrum-picker>
             </span>
         </div>
 
         <div class="gf-form">
-            <label class="gf-form-label width-9">Mid</label>
-            <span class="max-width-10">
-                <spectrum-picker class="gf-form-input" ng-model="ctrl.panel.grad.c1" ng-change="ctrl.render()" ></spectrum-picker>
+            <label class="gf-form-label width-5">Mid</label>
+            <span class="max-width-5">
+                <input type="text" class="input-small" ng-model="ctrl.panel.gradient.c1.v" ng-change="ctrl.render()" ng-model-onblur />
+            </span>
+            <span class="max-width-5">
+                <spectrum-picker class="gf-form-input" ng-model="ctrl.panel.gradient.c1.c" ng-change="ctrl.render()" ></spectrum-picker>
             </span>
         </div>
 
         <div class="gf-form">
-            <label class="gf-form-label width-9">To</label>
-            <span class="max-width-10">
-                <spectrum-picker class="gf-form-input" ng-model="ctrl.panel.grad.c2" ng-change="ctrl.render()" ></spectrum-picker>
+            <label class="gf-form-label width-5">To</label>
+            <span class="max-width-5">
+                <input type="text" class="input-small" ng-model="ctrl.panel.gradient.c2.v" ng-change="ctrl.render()" ng-model-onblur />
+            </span>
+            <span class="max-width-5">
+                <spectrum-picker class="gf-form-input" ng-model="ctrl.panel.gradient.c2.c" ng-change="ctrl.render()" ></spectrum-picker>
+            </span>
+        </div>
+
+
+    </div>
+
+    <div class="section gf-form-group">
+        <h5 class="section-heading">General options</h5>
+        <div class="gf-form">
+            <label class="gf-form-label width-5" title="radius of each 'point' of the heatmap, 25 by default">Radius</label>
+            <span class="max-width-5">
+                <input type="text" class="input-small" ng-model="ctrl.panel.heatOpts.radius" ng-change="ctrl.render()" ng-model-onblur />
+            </span>
+        </div>
+        <div class="gf-form">
+            <label class="gf-form-label width-5" title="the minimum opacity the heat will start at">Min. Opacity</label>
+            <span class="max-width-5">
+                <input type="text" class="input-small" ng-model="ctrl.panel.heatOpts.minOpacity" ng-change="ctrl.render()" ng-model-onblur />
+            </span>
+        </div>
+        <div class="gf-form">
+            <label class="gf-form-label width-5" title="zoom level where the points reach maximum intensity (as intensity scales with zoom), equals maxZoom of the map by default">Max. Zoom</label>
+            <span class="max-width-5">
+                <input type="text" class="input-small" ng-model="ctrl.panel.heatOpts.maxZoom" ng-change="ctrl.render()" ng-model-onblur />
+            </span>
+        </div>
+        <div class="gf-form">
+            <label class="gf-form-label width-5" title="maximum point intensity, 1.0 by default">Max</label>
+            <span class="max-width-5">
+                <input type="text" class="input-small" ng-model="ctrl.panel.heatOpts.max" ng-change="ctrl.render()" ng-model-onblur />
+            </span>
+        </div>
+        <div class="gf-form">
+            <label class="gf-form-label width-5" title="amount of blur, 15 by default">Blur</label>
+            <span class="max-width-5">
+                <input type="text" class="input-small" ng-model="ctrl.panel.heatOpts.blur" ng-change="ctrl.render()" ng-model-onblur />
             </span>
         </div>
     </div>
-
     <!--<div class="section gf-form-group" ng-if="ctrl.panel.mode === 'time'">-->
         <!--<h5 class="section-heading">Colors</h5>-->
         <!--<div class="gf-form">-->
