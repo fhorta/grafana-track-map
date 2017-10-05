@@ -60,7 +60,9 @@ System.register(['./leaflet.js', 'lodash', './css/clock-panel.css!', './leaflet.
         var map_list = [];
         for (var k in map_ctrl) {
             if (map_ctrl.hasOwnProperty(k)) {
-                map_list.push(map_ctrl[k]);
+                if (map_ctrl[k]['count'] > 0) {
+                    map_list.push(map_ctrl[k]['map']);
+                }
             }
         }
         //console.log(map_list);
@@ -277,7 +279,10 @@ System.register(['./leaflet.js', 'lodash', './css/clock-panel.css!', './leaflet.
                         myMap = L.map(mapId);
                         var fix = 0.000000000001;
 
-                        map_ctrl[mapId] = myMap;
+                        map_ctrl[mapId] = {
+                            map: myMap,
+                            count: coords.length
+                        };
 
                         if (data[0] != undefined) {
                             myMap.setView(new L.LatLng(40.730610, -73.935242), 18);
@@ -369,7 +374,7 @@ System.register(['./leaflet.js', 'lodash', './css/clock-panel.css!', './leaflet.
                     value: function onPanelTeardown() {
                         this.$timeout.cancel(this.nextTickPromise);
                         //console.log("teardown: ", this);
-                        map_ctrl[this.panel.mapId].remove();
+                        map_ctrl[this.panel.mapId]['map'].remove();
                         delete map_ctrl[this.panel.mapId];
                         syncMaps();
                     }
