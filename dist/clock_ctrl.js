@@ -276,7 +276,10 @@ System.register(['./leaflet.js', 'lodash', './css/clock-panel.css!', './leaflet.
                         });
                         center = center ? center.position : [0, 0];
 
-                        myMap = L.map(mapId);
+                        myMap = L.map(mapId, {
+                            zoomControl: false,
+                            attributionControl: false
+                        });
                         var fix = 0.000000000001;
 
                         map_ctrl[mapId] = {
