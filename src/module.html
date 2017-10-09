@@ -1,3 +1,13 @@
+
 <div class="clock-panel" ng-style="{height: ctrl.height}">
-  <div style="height: 100%; width:100%" id="{{ctrl.panel.mapId}}"></div>
+    <div style="height:100%; width:100%" id="{{ctrl.panel.mapId}}"></div>
+
+    <!--<div class="colorbar">-->
+        <!--<svg id="colorbar-{{ctrl.panel.mapId}}"></svg>-->
+    <!--</div>-->
+    <div class="histogram">
+        <div class="wrap" id="wrap-hist-{{ctrl.panel.mapId}}">
+            <svg id="hist-{{ctrl.panel.mapId}}"></svg>
+        </div>
+    </div>
 </div>

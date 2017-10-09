@@ -4,3 +4,68 @@
   justify-content: center;
   flex-direction: column;
 }
+
+.colorbar {
+    position: absolute;
+    right: 42px;
+    background-color: white;
+    width: 17px;
+    z-index: 99999;
+    height: 79%;
+}
+
+.histogram {
+    position: absolute;
+    background-color: rgba(89, 79, 79, 0.43);
+    width: 30%;
+    z-index: 999;
+    height: 30%;
+    bottom: 17px;
+    right: 23px;
+}
+
+.histogram .wrap{
+    z-index: 9999;
+    width: 95%;
+    height: 95%;
+}
+
+
+axis path,
+.axis line {
+    fill: none;
+    stroke: #000;
+    shape-rendering: crispEdges;
+
+}
+
+/*.bar {*/
+    /*fill: orange;*/
+
+/*}*/
+
+/*.bar:hover {*/
+    /*fill: orangered ;*/
+
+/*}*/
+
+.x.axis path {
+    display: none;
+
+}
+
+.wrap div.tooltip {
+    position: absolute;
+    text-align: center;
+    width: 60px;
+    height: 28px;
+    padding: 2px;
+    font: 12px sans-serif;
+    font-color: white;
+    background: black;
+    border: 0px;
+    /*border-radius: 8px;*/
+    pointer-events: none;
+
+}
+

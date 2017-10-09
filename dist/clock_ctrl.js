@@ -1,9 +1,9 @@
 'use strict';
 
-System.register(['./leaflet.js', 'lodash', './css/clock-panel.css!', './leaflet.css!', 'app/plugins/sdk', 'app/core/app_events', './leaflet-heat.js', './leaflet-sync.js'], function (_export, _context) {
+System.register(['./leaflet.js', 'lodash', './css/clock-panel.css!', './leaflet.css!', 'app/plugins/sdk', 'app/core/app_events', './leaflet-heat.js', './leaflet-sync.js', './external/d3.min.js', './external/d3-color.min.js'], function (_export, _context) {
     "use strict";
 
-    var _, MetricsPanelCtrl, appEvents, _createClass, map_ctrl, heatOpts, panelDefaults, ClockCtrl, Geohash;
+    var _, MetricsPanelCtrl, appEvents, d3, _slicedToArray, _createClass, map_ctrl, cmap_opts, heatOpts, panelDefaults, ClockCtrl, Geohash;
 
     function _classCallCheck(instance, Constructor) {
         if (!(instance instanceof Constructor)) {
@@ -42,6 +42,11 @@ System.register(['./leaflet.js', 'lodash', './css/clock-panel.css!', './leaflet.
         return s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() + s4() + s4();
     }
 
+    function cleanPrevChart(mapId) {
+        var cid = map_ctrl[mapId]['chart_id'] + " > *";
+        d3.select(cid).remove();
+    }
+
     function loadGradient(gradient) {
         var ret = {};
         var values = [gradient.c0.v, gradient.c1.v, gradient.c2.v];
@@ -51,6 +56,7 @@ System.register(['./leaflet.js', 'lodash', './css/clock-panel.css!', './leaflet.
         return ret;
     }
 
+    //import './realworld-10000.js';
     //import {h337} from './heatmap.js'
     //import {HeatmapOverlay} from './leaflet-heatmap.js';
     //
@@ -130,6 +136,265 @@ System.register(['./leaflet.js', 'lodash', './css/clock-panel.css!', './leaflet.
         }
         return ret;
     }
+
+    //thanks to: https://github.com/bmschmidt/colorbar
+    function Colorbar() {
+
+        var scale,
+            // the input scale this represents;
+        margin = { top: 5, right: 30, bottom: 25, left: 0 };
+
+        var orient = "vertical",
+            origin = {
+            x: 0,
+            y: 0
+        },
+            // where on the parent to put it
+        barlength = 100,
+            // how long is the bar
+        thickness = 50,
+            // how thick is the bar
+        title = "",
+            // title for the colorbar
+        scaleType = "linear";
+
+        var checkScaleType = function checkScaleType(scale) {
+            // AFAIK, d3 scale types aren't easily accessible from the scale itself.
+            // But we need to know the scale type for formatting axes properly
+            //Or do we? this variable seems not to be used.
+            cop = scale.copy();
+            cop.range([0, 1]);
+            cop.domain([1, 10]);
+
+            if (typeof cop.invertExtent != "undefined") {
+                return "quantile";
+            }
+            if (Math.abs((cop(10) - cop(1)) / Math.log(10) - (cop(10) - cop(2)) / Math.log(5)) < 1e-6) {
+                return "log";
+            } else if (Math.abs((cop(10) - cop(1)) / 9 - (cop(10) - cop(2)) / 8) < 1e-6) {
+                return "linear";
+            } else if (Math.abs((cop(10) - cop(1)) / (Math.sqrt(10) - 1) - (cop(10) - cop(2)) / (Math.sqrt(10) - Math.sqrt(2))) < 1e-6) {
+                return "sqrt";
+            } else {
+                return "unknown";
+            }
+        };
+
+        function chart(selection) {
+            var fillLegend, fillLegendScale;
+
+            selection.pointTo = function (inputNumbers) {
+                var pointer = fillLegend.selectAll(".pointer");
+                var pointerWidth = Math.round(thickness * 3 / 4);
+
+                //Also creates a pointer if it doesn't exist yet.
+                pointers = fillLegend.selectAll('.pointer').data([inputNumbers]);
+
+                pointerSVGdef = function pointerSVGdef() {
+                    return orient == "horizontal" ? 'M ' + 0 + ' ' + thickness + ' l -' + pointerWidth + ' -' + pointerWidth + ' l ' + 2 * pointerWidth + ' -' + 0 + ' z' : 'M ' + thickness + ' ' + 0 + ' l -' + pointerWidth + ' -' + pointerWidth + ' l ' + 0 + ' ' + 2 * pointerWidth + ' z';
+                };
+
+                pointers.enter().append('path').attr('transform', "translate(0," + (fillLegendScale(inputNumbers) - pointerWidth) + ')').classed("pointer", true).classed("axis", true).attr('d', pointerSVGdef()).attr("fill", "grey").attr("opacity", "0");
+
+                //whether it's new or not, it updates it.
+                pointers.transition().duration(1000).attr('opacity', 1).attr('transform', orient == "vertical" ? "translate(0," + fillLegendScale(inputNumbers) + ')' : "translate(" + fillLegendScale(inputNumbers) + ',0)')
+                //and then it fades the pointer out over 5 seconds.
+                .transition().delay(2000).duration(3000).attr('opacity', 0).remove();
+            };
+
+            selection.each(function (data) {
+
+                var scaleType = checkScaleType(scale);
+                var thickness_attr;
+                var length_attr;
+                var axis_orient;
+                var position_variable, non_position_variable;
+                var axis_transform;
+
+                if (orient === "horizontal") {
+                    var tmp = [margin.left, margin.right, margin.top, margin.bottom];
+                    margin.top = tmp[0];
+                    margin.bottom = tmp[1];
+                    margin.left = tmp[2];
+                    margin.right = tmp[3];
+                    thickness_attr = "height";
+                    length_attr = "width";
+                    axis_orient = "bottom";
+                    position_variable = "x";
+                    non_position_variable = "y";
+                    axis_transform = "translate (0," + thickness + ")";
+                } else {
+                    thickness_attr = "width";
+                    length_attr = "height";
+                    axis_orient = "right";
+                    position_variable = "y";
+                    non_position_variable = "x";
+                    axis_transform = "translate (" + thickness + "," + 0 + ")";
+                }
+
+                // select the svg if it exists
+                var svg = d3.select(this).selectAll("svg.colorbar").data([origin]);
+
+                // otherwise create the skeletal chart
+                var new_colorbars = svg.enter().append("svg").classed("colorbar", true).attr("x", function (d) {
+                    return d[0] - margin.right;
+                }).attr("y", function (d) {
+                    return d[1] - margin.top;
+                });
+
+                offsetGroup = new_colorbars.append("g").classed("colorbar", true).attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+                offsetGroup.append("g").attr("class", "legend rectArea");
+
+                offsetGroup.append("g").attr("class", "axis color");
+
+                svg.attr(thickness_attr, thickness + margin.left + margin.right).attr(length_attr, barlength + margin.top + margin.bottom).style("margin-top", origin.y - margin.top + "px").style("margin-left", origin.x - margin.left + "px");
+
+                // This either creates, or updates, a fill legend, and drops it
+                // on the screen. A fill legend includes a pointer chart can be
+                // updated in response to mouseovers, because that's way cool.
+
+                fillLegend = svg.selectAll("g.colorbar").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+                fillLegendScale = scale.copy();
+
+                if (typeof fillLegendScale.invert == "undefined") {
+                    //console.log("assuming it's a quantile scale")
+                    fillLegendScale = d3.scale.linear().domain(d3.extent(fillLegendScale.domain()));
+                }
+
+                var legendRange = d3.range(0, barlength, by = barlength / (fillLegendScale.domain().length - 1));
+
+                legendRange.push(barlength);
+
+                if (orient == "vertical") {
+                    //Vertical should go bottom to top, horizontal from left to right.
+                    //This should be changeable in the options, ideally.
+                    legendRange.reverse();
+                }
+                fillLegendScale.range(legendRange);
+
+                colorScaleRects = fillLegend.selectAll("rect.legend").data(d3.range(0, barlength));
+
+                colorScaleRects.enter().append("rect").attr("class", "legend").style("opacity", 0).style("stroke-thickness", 0).style("fill", function (d) {
+                    return scale(fillLegendScale.invert(d));
+                });
+
+                colorScaleRects.exit().remove();
+
+                //Switch to using the original selection so that the transition will be inheirited
+                selection.selectAll("rect.legend").style("opacity", 1).attr(thickness_attr, thickness).attr(length_attr, 2) // single pixel thickness produces ghosting on some browsers
+                .attr(position_variable, function (d) {
+                    return d;
+                }).attr(non_position_variable, 0).style("fill", function (d) {
+                    return scale(fillLegendScale.invert(d));
+                });
+
+                colorAxisFunction = d3.svg.axis().scale(fillLegendScale).orient(axis_orient);
+
+                if (typeof scale.quantiles != "undefined") {
+                    quantileScaleMarkers = scale.quantiles().concat(d3.extent(scale.domain()));
+                    console.log(quantileScaleMarkers);
+                    colorAxisFunction.tickValues(quantileScaleMarkers);
+                }
+
+                //Now make an axis
+                fillLegend.selectAll(".color.axis").attr("transform", axis_transform).call(colorAxisFunction);
+
+                //make a title
+                titles = fillLegend.selectAll(".axis.title").data([{ label: title }]).attr("id", "#colorSelector").attr('transform', 'translate (0, -10)').style("text-anchor", "middle").text(function (d) {
+                    return d.label;
+                });
+
+                titles.exit().remove();
+
+                //            return this;
+            });
+        }
+
+        function prettyName(number) {
+
+            var comparisontype = comparisontype || function () {
+                return "";
+            };
+
+            if (comparisontype() != 'comparison') {
+                suffix = '';
+                switch (true) {
+                    case number >= 1000000000:
+                        number = number / 1000000000;
+                        suffix = 'B';
+                        break;
+                    case number >= 1000000:
+                        number = number / 1000000;
+                        suffix = 'M';
+                        break;
+                    case number >= 1000:
+                        number = number / 1000;
+                        suffix = 'K';
+                        break;
+                }
+                if (number < .1) {
+                    return Math.round(number * 100) / 100 + suffix;
+                }
+                return Math.round(number * 10) / 10 + suffix;
+            }
+            if (comparisontype() == 'comparison') {
+                if (number >= 1) {
+                    return Math.round(number) + ":1";
+                }
+                if (number < 1) {
+                    return "1:" + Math.round(1 / number);
+                }
+            }
+        }
+
+        //getter-setters
+        chart.origin = function (value) {
+            if (!arguments.length) return origin;
+            origin = value;
+            return chart;
+        };
+
+        chart.margin = function (value) {
+            if (!arguments.length) return margin;
+            margin = value;
+            return chart;
+        };
+
+        chart.thickness = function (value) {
+            if (!arguments.length) return thickness;
+            thickness = value;
+            return chart;
+        };
+
+        chart.barlength = function (value) {
+            if (!arguments.length) return barlength;
+            barlength = value;
+            return chart;
+        };
+
+        chart.title = function (value) {
+            if (!arguments.length) return title;
+            title = value;
+            return chart;
+        };
+
+        chart.scale = function (value) {
+            if (!arguments.length) return scale;
+            scale = value;
+            return chart;
+        };
+
+        chart.orient = function (value) {
+            if (!arguments.length) return orient;
+            if (value === "vertical" || value === "horizontal") orient = value;else console.warn("orient can be only vertical or horizontal, not", value);
+            orient = value;
+            return chart;
+        };
+
+        return chart;
+    }
     return {
         setters: [function (_leafletJs) {}, function (_lodash) {
             _ = _lodash.default;
@@ -137,8 +402,48 @@ System.register(['./leaflet.js', 'lodash', './css/clock-panel.css!', './leaflet.
             MetricsPanelCtrl = _appPluginsSdk.MetricsPanelCtrl;
         }, function (_appCoreApp_events) {
             appEvents = _appCoreApp_events.default;
-        }, function (_leafletHeatJs) {}, function (_leafletSyncJs) {}],
+        }, function (_leafletHeatJs) {}, function (_leafletSyncJs) {}, function (_externalD3MinJs) {
+            d3 = _externalD3MinJs;
+        }, function (_externalD3ColorMinJs) {}],
         execute: function () {
+            _slicedToArray = function () {
+                function sliceIterator(arr, i) {
+                    var _arr = [];
+                    var _n = true;
+                    var _d = false;
+                    var _e = undefined;
+
+                    try {
+                        for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) {
+                            _arr.push(_s.value);
+
+                            if (i && _arr.length === i) break;
+                        }
+                    } catch (err) {
+                        _d = true;
+                        _e = err;
+                    } finally {
+                        try {
+                            if (!_n && _i["return"]) _i["return"]();
+                        } finally {
+                            if (_d) throw _e;
+                        }
+                    }
+
+                    return _arr;
+                }
+
+                return function (arr, i) {
+                    if (Array.isArray(arr)) {
+                        return arr;
+                    } else if (Symbol.iterator in Object(arr)) {
+                        return sliceIterator(arr, i);
+                    } else {
+                        throw new TypeError("Invalid attempt to destructure non-iterable instance");
+                    }
+                };
+            }();
+
             _createClass = function () {
                 function defineProperties(target, props) {
                     for (var i = 0; i < props.length; i++) {
@@ -158,6 +463,11 @@ System.register(['./leaflet.js', 'lodash', './css/clock-panel.css!', './leaflet.
             }();
 
             map_ctrl = {};
+            cmap_opts = {
+                "inferno": d3.interpolateInferno,
+                "plasma": d3.interpolatePlasma,
+                "rainbow": d3.interpolateRainbow
+            };
             heatOpts = {
                 radius: 20,
                 minOpacity: 0,
@@ -167,12 +477,10 @@ System.register(['./leaflet.js', 'lodash', './css/clock-panel.css!', './leaflet.
                 gradient: { 0.4: 'blue', 0.65: 'lime', 1: 'red' }
             };
             panelDefaults = {
+                'metric': "undefined",
                 'heatOpts': heatOpts,
-                'gradient': {
-                    c0: { c: 'blue', v: 0.4 },
-                    c1: { c: 'red', v: 0.64 },
-                    c2: { c: 'lime', v: 1 }
-                }
+                'cmap': "rainbow",
+                'nbins': 10
             };
 
             _export('ClockCtrl', ClockCtrl = function (_MetricsPanelCtrl) {
@@ -191,38 +499,19 @@ System.register(['./leaflet.js', 'lodash', './css/clock-panel.css!', './leaflet.
                     timeSrv = $injector.get('timeSrv');
                     _this.panel.maxDataPoints = 10000;
 
-                    var mapId = String(guid()) + "_map";
+                    var mapId = "map-" + String(guid());
+                    var colorbarId = "colorbar-" + mapId;
+                    var colorbar_;
 
                     _this.panel.mapId = mapId;
 
                     _.defaults(_this.panel, panelDefaults);
                     var heatOpts = _this.panel.heatOpts;
-                    heatOpts.gradient = loadGradient(_this.panel.gradient);
-
                     var dashboard = _this.dashboard;
 
-                    //appEvents.on('graph-hover', event => {
-                    //if (coords) {
-                    //for (var i = 0; i < coords.length; i++) {
-                    //if (coords[i].timestamp >= event.pos.x) {
-                    //if (coords[i].circle) {
-                    //coords[i].circle.setStyle({
-                    //fillColor: 'red',
-                    //color: 'red'
-                    //});
-                    //}
-                    //if (highlightedMarker) {
-                    //highlightedMarker.setStyle({
-                    //fillColor: 'none',
-                    //color: 'none'
-                    //});
-                    //}
-                    //highlightedMarker = coords[i].circle;
-                    //break;
-                    //}
-                    //}
-                    //}
-                    //});
+                    var metric = _this.panel.metric;
+                    var cmap = cmap_opts[_this.panel.cmap];
+                    var nbins = _this.panel.nbins;
 
                     _this.events.on('init-edit-mode', _this.onInitEditMode.bind(_this));
                     _this.events.on('panel-teardown', _this.onPanelTeardown.bind(_this));
@@ -237,7 +526,7 @@ System.register(['./leaflet.js', 'lodash', './css/clock-panel.css!', './leaflet.
                         var polyline = [];
                         var lastLineHasData = false;
 
-                        if (data[0] != undefined) {
+                        if (data[0] != undefined && data[0].rows != undefined) {
                             for (var i = 0; i < data[0].rows.length; i++) {
                                 var position = data[0].rows[i][1] ? Geohash.decode(data[0].rows[i][1]) : null;
                                 if (position) {
@@ -280,12 +569,85 @@ System.register(['./leaflet.js', 'lodash', './css/clock-panel.css!', './leaflet.
                             zoomControl: false,
                             attributionControl: false
                         });
-                        var fix = 0.000000000001;
 
                         map_ctrl[mapId] = {
                             map: myMap,
-                            count: coords.length
+                            count: coords.length,
+                            chart_id: "svg#hist-" + mapId
                         };
+
+                        var values;
+                        if (1) {
+                            // testing w fake values or not
+                            values = coords.map(function (d) {
+                                return d.value;
+                            });
+                        } else {
+                            values = d3.range(1000).map(d3.randomBates(10));
+                        }
+
+                        var _d3$extent = d3.extent(values),
+                            _d3$extent2 = _slicedToArray(_d3$extent, 2),
+                            min = _d3$extent2[0],
+                            max = _d3$extent2[1];
+
+                        var realValues = d3.scaleLinear().range([min, max]);
+                        values = values.map(function (d) {
+                            return (d - min) / max;
+                        });
+
+                        var formatVal = d3.format(",.00f");
+
+                        cleanPrevChart(mapId);
+
+                        var hist = d3.select(map_ctrl[mapId]['chart_id']);
+                        //hist.attr("preserveAspectRatio", "xMinYMin meet")
+                        //hist.attr("viewBox", "0 0 960 500");
+
+                        var wrap = $("div#wrap-hist-" + mapId);
+
+                        var margin = { top: 0, right: 0, bottom: 0, left: 0 },
+                            width = +wrap.width() - margin.left - margin.right,
+                            height = +wrap.height() - margin.top - margin.bottom,
+                            g = hist.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+                        var x = d3.scaleLinear().rangeRound([0, width]);
+
+                        var histogram = d3.histogram().domain(x.domain()).thresholds(x.ticks(nbins));
+
+                        var bins = histogram(values);
+                        // Scale the range of the data in the y domain
+
+                        var y = d3.scaleLinear().domain([0, d3.max(bins, function (d) {
+                            return d.length;
+                        })]).range([height, 0]);
+
+                        var div = d3.select("body").append("div").attr("class", "tooltip").style("opacity", 0);
+
+                        var bar = g.selectAll("bar").data(bins).enter().append("g").attr("class", "bar").attr("transform", function (d) {
+                            return "translate(" + x(d.x0) + "," + y(d.length) + ")";
+                        });
+
+                        var set_mouseover = function set_mouseover(d) {
+                            div.transition().duration(50).style("opacity", .9).style("background-color", "black");
+                            div.html("[" + formatVal(realValues(d.x0)) + "-" + formatVal(realValues(d.x1)) + "]").style("left", d3.event.pageX + "px").style("top", d3.event.pageY - 28 + "px");
+                        };
+
+                        var set_mouseout = function set_mouseout(d) {
+                            div.transition().duration(50).style("opacity", 0);
+                        };
+
+                        var set_fill = function set_fill(d) {
+                            var c = cmap(d.x0);
+                            heatOpts.gradient[d.x1] = c;
+                            return c;
+                        };
+
+                        bar.append("rect").attr("x", 0).attr("width", x(bins[0].x1) - x(bins[0].x0) - 1).attr("height", function (d) {
+                            return height - y(d.length);
+                        }).attr("fill", set_fill).on("mouseover", set_mouseover).on("mouseout", set_mouseout);
+
+                        var fix = 0.000000000001;
 
                         if (data[0] != undefined) {
                             myMap.setView(new L.LatLng(40.730610, -73.935242), 18);
@@ -293,15 +655,7 @@ System.register(['./leaflet.js', 'lodash', './css/clock-panel.css!', './leaflet.
                             myMap.setView(new L.LatLng(center[0], center[1]), 18);
                         }
 
-                        //console.log("data: ", data);
-                        //console.log(": ", coords.length);
-                        //console.log("maps: ",Object.keys(map_ctrl).length, map_ctrl);
-
                         myMap.fitBounds([[minLat + fix, minLon + fix], [maxLat + fix, maxLon + fix]]);
-
-                        //var tiles = L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
-                        //attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
-                        //}).addTo(myMap);
 
                         var tiles = L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', {
                             attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="http://cartodb.com/attributions">CartoDB</a>',
@@ -309,60 +663,12 @@ System.register(['./leaflet.js', 'lodash', './css/clock-panel.css!', './leaflet.
                             maxZoom: 20
                         }).addTo(myMap);
 
-                        //var scale = function(opts){
-                        //var istart = opts.domain[0],
-                        //istop  = opts.domain[1],
-                        //ostart = opts.range[0],
-                        //ostop  = opts.range[1];
-                        //return function scale(value) {
-                        //return ostart + (ostop - ostart) * ((value - istart) / (istop - istart));
-                        //}
-                        //};
-
-                        //var nscale=10;
-                        //var mscale = scale({domain:[0,nscale],range:[0,1]});
-                        //var mgradient = {};
-                        //var inc = 0;
-                        //var mcolors = generateColor('#111111','#6495ED',nscale);
-
-                        //mcolors.map(function (c) {
-                        //mgradient[mscale(inc)] = "#"+String(mcolors[inc]);
-                        //inc+=1;
-                        //})
-
                         data = coords.map(function (p) {
                             return [p.position.lat, p.position.lng, p.value];
                         });
-
                         var heatLayer = L.heatLayer(data, heatOpts).addTo(myMap);
-
+                        //console.log("coords [", metric,"] ", coords.length);
                         syncMaps();
-
-                        //myMap.on('boxzoomend', function (e) {
-                        //const coordsInBox = coords.filter(
-                        //coord =>
-                        //coord.position &&
-                        //e.boxZoomBounds.contains(
-                        //L.latLng(coord.position.lat, coord.position.lng)
-                        //)
-                        //);
-                        //const minTime = Math.min.apply(
-                        //Math,
-                        //coordsInBox.map(coord => coord.timestamp)
-                        //);
-                        //const maxTime = Math.max.apply(
-                        //Math,
-                        //coordsInBox.map(coord => coord.timestamp)
-                        //);
-                        //console.log(new Date(minTime));
-                        //console.log(new Date(maxTime));
-                        //if (isFinite(minTime) && isFinite(maxTime)) {
-                        //timeSrv.setTime({
-                        //from: moment.utc(minTime),
-                        //to: moment.utc(maxTime)
-                        //});
-                        //}
-                        //});
                     });
                     return _this;
                 }
@@ -378,17 +684,18 @@ System.register(['./leaflet.js', 'lodash', './css/clock-panel.css!', './leaflet.
                         this.$timeout.cancel(this.nextTickPromise);
                         //console.log("teardown: ", this);
                         map_ctrl[this.panel.mapId]['map'].remove();
+
+                        var mapId = this.panel.mapId;
+                        cleanPrevChart(mapId);
+
                         delete map_ctrl[this.panel.mapId];
                         syncMaps();
                     }
                 }, {
                     key: 'link',
                     value: function link(scope, elem) {
-                        var _this2 = this;
-
                         this.events.on('render', function () {
                             //const $panelContainer = elem.find('.panel-container');
-                            _this2.panel.heatOpts.gradient = loadGradient(_this2.panel.gradient);
                             //console.log(this.panel.heatOpts);
                             //console.log("link: ", Object.keys(scope.maps).length, scope.maps);
                             //if (scope.maps[this.panel.mapId] != undefined) {

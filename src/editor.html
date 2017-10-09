@@ -3,6 +3,14 @@
     <div class="section gf-form-group">
         <h5 class="section-heading">Gradient options</h5>
 
+        <div class="gf-form">
+            <label class="gf-form-label width-5">Metric</label>
+            <span class="max-width-5">
+                <input type="text" class="input-small" ng-model="ctrl.panel.metric" ng-change="ctrl.render()" ng-model-onblur />
+            </span>
+        </div>
+
+
         <!--<div class="gf-form">-->
             <!--<label class="gf-form-label width-9">Clock Mode</label>-->
             <!--<div class="gf-form-select-wrapper max-width-10">-->
@@ -10,35 +18,58 @@
             <!--</div>-->
         <!--</div>-->
 
+
         <div class="gf-form">
-            <label class="gf-form-label width-5">From</label>
-            <span class="max-width-5">
-                <input type="text" class="input-small" ng-model="ctrl.panel.gradient.c0.v" ng-change="ctrl.render()" ng-model-onblur />
-            </span>
-            <span class="max-width-5">
-                <spectrum-picker class="gf-form-input" ng-model="ctrl.panel.gradient.c0.c" ng-change="ctrl.render()" ></spectrum-picker>
-            </span>
+            <label class="gf-form-label width-5">Colormap</label>
+            <select class="input-small gf-form-input" ng-model="ctrl.panel.cmap" 
+                                                      ng-options="t for t in ['rainbow', 'inferno', 'plasma']" ng-change="ctrl.render()"></select>
         </div>
 
         <div class="gf-form">
-            <label class="gf-form-label width-5">Mid</label>
-            <span class="max-width-5">
-                <input type="text" class="input-small" ng-model="ctrl.panel.gradient.c1.v" ng-change="ctrl.render()" ng-model-onblur />
-            </span>
-            <span class="max-width-5">
-                <spectrum-picker class="gf-form-input" ng-model="ctrl.panel.gradient.c1.c" ng-change="ctrl.render()" ></spectrum-picker>
-            </span>
+            <label class="gf-form-label width-5">Histogram #Bins</label>
+            <select class="input-small gf-form-input" ng-model="ctrl.panel.nbins" 
+                                                      ng-options="t for t in [5,10,15,20]" ng-change="ctrl.render()"></select>
         </div>
 
-        <div class="gf-form">
-            <label class="gf-form-label width-5">To</label>
-            <span class="max-width-5">
-                <input type="text" class="input-small" ng-model="ctrl.panel.gradient.c2.v" ng-change="ctrl.render()" ng-model-onblur />
-            </span>
-            <span class="max-width-5">
-                <spectrum-picker class="gf-form-input" ng-model="ctrl.panel.gradient.c2.c" ng-change="ctrl.render()" ></spectrum-picker>
-            </span>
-        </div>
+        <!--<div class="gf-form">-->
+            <!--<label class="gf-form-label width-5">From</label>-->
+            <!--<span class="max-width-5">-->
+                <!--<input type="text" class="input-small" ng-model="ctrl.panel.gradient.c0.v" ng-change="ctrl.render()" ng-model-onblur />-->
+            <!--</span>-->
+            <!--<span class="max-width-5">-->
+                <!--<spectrum-picker class="gf-form-input" ng-model="ctrl.panel.gradient.c0.c" ng-change="ctrl.render()" ></spectrum-picker>-->
+            <!--</span>-->
+        <!--</div>-->
+
+        <!--<div class="gf-form">-->
+            <!--<label class="gf-form-label width-5">Mid</label>-->
+            <!--<span class="max-width-5">-->
+                <!--<input type="text" class="input-small" ng-model="ctrl.panel.gradient.c1.v" ng-change="ctrl.render()" ng-model-onblur />-->
+            <!--</span>-->
+            <!--<span class="max-width-5">-->
+                <!--<spectrum-picker class="gf-form-input" ng-model="ctrl.panel.gradient.c1.c" ng-change="ctrl.render()" ></spectrum-picker>-->
+            <!--</span>-->
+        <!--</div>-->
+
+        <!--<div class="gf-form">-->
+            <!--<label class="gf-form-label width-5">To</label>-->
+            <!--<span class="max-width-5">-->
+                <!--<input type="text" class="input-small" ng-model="ctrl.panel.gradient.c2.v" ng-change="ctrl.render()" ng-model-onblur />-->
+            <!--</span>-->
+            <!--<span class="max-width-5">-->
+                <!--<spectrum-picker class="gf-form-input" ng-model="ctrl.panel.gradient.c2.c" ng-change="ctrl.render()" ></spectrum-picker>-->
+            <!--</span>-->
+        <!--</div>-->
+
+        <!--<div class="gf-form">-->
+            <!--[><label for="scale-select">Select Colour Scale: </label><]-->
+            <!--[><select id="scale-select"><]-->
+                <!--[><option value="puOr11">puOr11</option><]-->
+                <!--[><option value="spectral8">spectral8</option><]-->
+                <!--[><option value="redBlackGreen">redBlackGreen</option><]-->
+                <!--[><option value="viridis">viridis</option><]-->
+            <!--[></select><]-->
+        <!--</div>-->
 
 
     </div>
