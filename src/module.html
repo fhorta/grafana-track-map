@@ -1,5 +1,6 @@
 
 <div class="clock-panel" ng-style="{height: ctrl.height}">
+
     <div style="height:100%; width:100%" id="{{ctrl.panel.mapId}}"></div>
 
     <!--<div class="colorbar">-->
@@ -7,7 +8,9 @@
     <!--</div>-->
     <div class="histogram">
         <div class="wrap" id="wrap-hist-{{ctrl.panel.mapId}}">
+            <div id="tooltip-hist-{{ctrl.panel.mapId}}"></div>
             <svg width=200px height=100px id="hist-{{ctrl.panel.mapId}}"></svg>
         </div>
     </div>
+
 </div>

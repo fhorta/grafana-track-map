@@ -21,14 +21,18 @@
 
         <div class="gf-form">
             <label class="gf-form-label width-5">Colormap</label>
-            <select class="input-small gf-form-input" ng-model="ctrl.panel.cmap" 
-                                                      ng-options="t for t in ['rainbow', 'inferno', 'plasma']" ng-change="ctrl.render()"></select>
         </div>
 
         <div class="gf-form">
             <label class="gf-form-label width-5">Histogram #Bins</label>
             <select class="input-small gf-form-input" ng-model="ctrl.panel.nbins" 
                                                       ng-options="t for t in [5,10,15,20]" ng-change="ctrl.render()"></select>
+            <span class="max-width-5">
+                <spectrum-picker class="gf-form-input" ng-model="ctrl.panel.c1" ng-change="ctrl.render()" ></spectrum-picker>
+            </span>
+            <span class="max-width-5">
+                <spectrum-picker class="gf-form-input" ng-model="ctrl.panel.c2" ng-change="ctrl.render()" ></spectrum-picker>
+            </span>
         </div>
 
         <!--<div class="gf-form">-->
