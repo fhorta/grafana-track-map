@@ -1,6 +1,6 @@
 'use strict';
 
-System.register(['./leaflet.js', 'lodash', './css/clock-panel.css!', './leaflet.css!', 'app/plugins/sdk', 'app/core/app_events', './leaflet-heat.js', './leaflet-sync.js', './external/d3.min.js', './external/d3-color.min.js'], function (_export, _context) {
+System.register(['./leaflet.js', './leaflet-markercluster.js', 'lodash', './css/clock-panel.css!', './leaflet.css!', 'app/plugins/sdk', 'app/core/app_events', './leaflet-heat.js', './leaflet-sync.js', './external/d3.min.js', './external/d3-color.min.js'], function (_export, _context) {
     "use strict";
 
     var _, MetricsPanelCtrl, appEvents, d3, _slicedToArray, _createClass, map_ctrl, cmap_opts, heatOpts, panelDefaults, ClockCtrl, Geohash;
@@ -89,314 +89,8 @@ System.register(['./leaflet.js', 'lodash', './css/clock-panel.css!', './leaflet.
         }
     }
 
-    function hex(c) {
-        var s = "0123456789abcdef";
-        var i = parseInt(c);
-        if (i == 0 || isNaN(c)) return "00";
-        i = Math.round(Math.min(Math.max(0, i), 255));
-        return s.charAt((i - i % 16) / 16) + s.charAt(i % 16);
-    }
-
-    /* Convert an RGB triplet to a hex string */
-    function convertToHex(rgb) {
-        return hex(rgb[0]) + hex(rgb[1]) + hex(rgb[2]);
-    }
-
-    /* Remove '#' in color hex string */
-    function trim(s) {
-        return s.charAt(0) == '#' ? s.substring(1, 7) : s;
-    }
-
-    /* Convert a hex string to an RGB triplet */
-    function convertToRGB(hex) {
-        var color = [];
-        color[0] = parseInt(trim(hex).substring(0, 2), 16);
-        color[1] = parseInt(trim(hex).substring(2, 4), 16);
-        color[2] = parseInt(trim(hex).substring(4, 6), 16);
-        return color;
-    }
-
-    function generateColor(colorStart, colorEnd, colorCount) {
-        // The beginning of your gradient
-        var start = convertToRGB(colorStart);
-        // The end of your gradient
-        var end = convertToRGB(colorEnd);
-        // The number of colors to compute
-        var len = colorCount;
-        //Alpha blending amount
-        var alpha = 0.0;
-        var ret = [];
-        for (var i = 0; i < len; i++) {
-            var c = [];
-            alpha += 1.0 / len;
-            c[0] = start[0] * alpha + (1 - alpha) * end[0];
-            c[1] = start[1] * alpha + (1 - alpha) * end[1];
-            c[2] = start[2] * alpha + (1 - alpha) * end[2];
-            ret.push(convertToHex(c));
-        }
-        return ret;
-    }
-
-    //thanks to: https://github.com/bmschmidt/colorbar
-    function Colorbar() {
-
-        var scale,
-            // the input scale this represents;
-        margin = { top: 5, right: 30, bottom: 25, left: 0 };
-
-        var orient = "vertical",
-            origin = {
-            x: 0,
-            y: 0
-        },
-            // where on the parent to put it
-        barlength = 100,
-            // how long is the bar
-        thickness = 50,
-            // how thick is the bar
-        title = "",
-            // title for the colorbar
-        scaleType = "linear";
-
-        var checkScaleType = function checkScaleType(scale) {
-            // AFAIK, d3 scale types aren't easily accessible from the scale itself.
-            // But we need to know the scale type for formatting axes properly
-            //Or do we? this variable seems not to be used.
-            cop = scale.copy();
-            cop.range([0, 1]);
-            cop.domain([1, 10]);
-
-            if (typeof cop.invertExtent != "undefined") {
-                return "quantile";
-            }
-            if (Math.abs((cop(10) - cop(1)) / Math.log(10) - (cop(10) - cop(2)) / Math.log(5)) < 1e-6) {
-                return "log";
-            } else if (Math.abs((cop(10) - cop(1)) / 9 - (cop(10) - cop(2)) / 8) < 1e-6) {
-                return "linear";
-            } else if (Math.abs((cop(10) - cop(1)) / (Math.sqrt(10) - 1) - (cop(10) - cop(2)) / (Math.sqrt(10) - Math.sqrt(2))) < 1e-6) {
-                return "sqrt";
-            } else {
-                return "unknown";
-            }
-        };
-
-        function chart(selection) {
-            var fillLegend, fillLegendScale;
-
-            selection.pointTo = function (inputNumbers) {
-                var pointer = fillLegend.selectAll(".pointer");
-                var pointerWidth = Math.round(thickness * 3 / 4);
-
-                //Also creates a pointer if it doesn't exist yet.
-                pointers = fillLegend.selectAll('.pointer').data([inputNumbers]);
-
-                pointerSVGdef = function pointerSVGdef() {
-                    return orient == "horizontal" ? 'M ' + 0 + ' ' + thickness + ' l -' + pointerWidth + ' -' + pointerWidth + ' l ' + 2 * pointerWidth + ' -' + 0 + ' z' : 'M ' + thickness + ' ' + 0 + ' l -' + pointerWidth + ' -' + pointerWidth + ' l ' + 0 + ' ' + 2 * pointerWidth + ' z';
-                };
-
-                pointers.enter().append('path').attr('transform', "translate(0," + (fillLegendScale(inputNumbers) - pointerWidth) + ')').classed("pointer", true).classed("axis", true).attr('d', pointerSVGdef()).attr("fill", "grey").attr("opacity", "0");
-
-                //whether it's new or not, it updates it.
-                pointers.transition().duration(1000).attr('opacity', 1).attr('transform', orient == "vertical" ? "translate(0," + fillLegendScale(inputNumbers) + ')' : "translate(" + fillLegendScale(inputNumbers) + ',0)')
-                //and then it fades the pointer out over 5 seconds.
-                .transition().delay(2000).duration(3000).attr('opacity', 0).remove();
-            };
-
-            selection.each(function (data) {
-
-                var scaleType = checkScaleType(scale);
-                var thickness_attr;
-                var length_attr;
-                var axis_orient;
-                var position_variable, non_position_variable;
-                var axis_transform;
-
-                if (orient === "horizontal") {
-                    var tmp = [margin.left, margin.right, margin.top, margin.bottom];
-                    margin.top = tmp[0];
-                    margin.bottom = tmp[1];
-                    margin.left = tmp[2];
-                    margin.right = tmp[3];
-                    thickness_attr = "height";
-                    length_attr = "width";
-                    axis_orient = "bottom";
-                    position_variable = "x";
-                    non_position_variable = "y";
-                    axis_transform = "translate (0," + thickness + ")";
-                } else {
-                    thickness_attr = "width";
-                    length_attr = "height";
-                    axis_orient = "right";
-                    position_variable = "y";
-                    non_position_variable = "x";
-                    axis_transform = "translate (" + thickness + "," + 0 + ")";
-                }
-
-                // select the svg if it exists
-                var svg = d3.select(this).selectAll("svg.colorbar").data([origin]);
-
-                // otherwise create the skeletal chart
-                var new_colorbars = svg.enter().append("svg").classed("colorbar", true).attr("x", function (d) {
-                    return d[0] - margin.right;
-                }).attr("y", function (d) {
-                    return d[1] - margin.top;
-                });
-
-                offsetGroup = new_colorbars.append("g").classed("colorbar", true).attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-                offsetGroup.append("g").attr("class", "legend rectArea");
-
-                offsetGroup.append("g").attr("class", "axis color");
-
-                svg.attr(thickness_attr, thickness + margin.left + margin.right).attr(length_attr, barlength + margin.top + margin.bottom).style("margin-top", origin.y - margin.top + "px").style("margin-left", origin.x - margin.left + "px");
-
-                // This either creates, or updates, a fill legend, and drops it
-                // on the screen. A fill legend includes a pointer chart can be
-                // updated in response to mouseovers, because that's way cool.
-
-                fillLegend = svg.selectAll("g.colorbar").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-                fillLegendScale = scale.copy();
-
-                if (typeof fillLegendScale.invert == "undefined") {
-                    //console.log("assuming it's a quantile scale")
-                    fillLegendScale = d3.scale.linear().domain(d3.extent(fillLegendScale.domain()));
-                }
-
-                var legendRange = d3.range(0, barlength, by = barlength / (fillLegendScale.domain().length - 1));
-
-                legendRange.push(barlength);
-
-                if (orient == "vertical") {
-                    //Vertical should go bottom to top, horizontal from left to right.
-                    //This should be changeable in the options, ideally.
-                    legendRange.reverse();
-                }
-                fillLegendScale.range(legendRange);
-
-                colorScaleRects = fillLegend.selectAll("rect.legend").data(d3.range(0, barlength));
-
-                colorScaleRects.enter().append("rect").attr("class", "legend").style("opacity", 0).style("stroke-thickness", 0).style("fill", function (d) {
-                    return scale(fillLegendScale.invert(d));
-                });
-
-                colorScaleRects.exit().remove();
-
-                //Switch to using the original selection so that the transition will be inheirited
-                selection.selectAll("rect.legend").style("opacity", 1).attr(thickness_attr, thickness).attr(length_attr, 2) // single pixel thickness produces ghosting on some browsers
-                .attr(position_variable, function (d) {
-                    return d;
-                }).attr(non_position_variable, 0).style("fill", function (d) {
-                    return scale(fillLegendScale.invert(d));
-                });
-
-                colorAxisFunction = d3.svg.axis().scale(fillLegendScale).orient(axis_orient);
-
-                if (typeof scale.quantiles != "undefined") {
-                    quantileScaleMarkers = scale.quantiles().concat(d3.extent(scale.domain()));
-                    console.log(quantileScaleMarkers);
-                    colorAxisFunction.tickValues(quantileScaleMarkers);
-                }
-
-                //Now make an axis
-                fillLegend.selectAll(".color.axis").attr("transform", axis_transform).call(colorAxisFunction);
-
-                //make a title
-                titles = fillLegend.selectAll(".axis.title").data([{ label: title }]).attr("id", "#colorSelector").attr('transform', 'translate (0, -10)').style("text-anchor", "middle").text(function (d) {
-                    return d.label;
-                });
-
-                titles.exit().remove();
-
-                //            return this;
-            });
-        }
-
-        function prettyName(number) {
-
-            var comparisontype = comparisontype || function () {
-                return "";
-            };
-
-            if (comparisontype() != 'comparison') {
-                suffix = '';
-                switch (true) {
-                    case number >= 1000000000:
-                        number = number / 1000000000;
-                        suffix = 'B';
-                        break;
-                    case number >= 1000000:
-                        number = number / 1000000;
-                        suffix = 'M';
-                        break;
-                    case number >= 1000:
-                        number = number / 1000;
-                        suffix = 'K';
-                        break;
-                }
-                if (number < .1) {
-                    return Math.round(number * 100) / 100 + suffix;
-                }
-                return Math.round(number * 10) / 10 + suffix;
-            }
-            if (comparisontype() == 'comparison') {
-                if (number >= 1) {
-                    return Math.round(number) + ":1";
-                }
-                if (number < 1) {
-                    return "1:" + Math.round(1 / number);
-                }
-            }
-        }
-
-        //getter-setters
-        chart.origin = function (value) {
-            if (!arguments.length) return origin;
-            origin = value;
-            return chart;
-        };
-
-        chart.margin = function (value) {
-            if (!arguments.length) return margin;
-            margin = value;
-            return chart;
-        };
-
-        chart.thickness = function (value) {
-            if (!arguments.length) return thickness;
-            thickness = value;
-            return chart;
-        };
-
-        chart.barlength = function (value) {
-            if (!arguments.length) return barlength;
-            barlength = value;
-            return chart;
-        };
-
-        chart.title = function (value) {
-            if (!arguments.length) return title;
-            title = value;
-            return chart;
-        };
-
-        chart.scale = function (value) {
-            if (!arguments.length) return scale;
-            scale = value;
-            return chart;
-        };
-
-        chart.orient = function (value) {
-            if (!arguments.length) return orient;
-            if (value === "vertical" || value === "horizontal") orient = value;else console.warn("orient can be only vertical or horizontal, not", value);
-            orient = value;
-            return chart;
-        };
-
-        return chart;
-    }
     return {
-        setters: [function (_leafletJs) {}, function (_lodash) {
+        setters: [function (_leafletJs) {}, function (_leafletMarkerclusterJs) {}, function (_lodash) {
             _ = _lodash.default;
         }, function (_cssClockPanelCss) {}, function (_leafletCss) {}, function (_appPluginsSdk) {
             MetricsPanelCtrl = _appPluginsSdk.MetricsPanelCtrl;
@@ -593,7 +287,7 @@ System.register(['./leaflet.js', 'lodash', './css/clock-panel.css!', './leaflet.
 
                         var realValues = d3.scaleLinear().range([min, max]);
                         values = values.map(function (d) {
-                            return (d - min) / max;
+                            return (d - min) / (max - min);
                         });
 
                         var formatVal = d3.format(",.00f");
@@ -606,7 +300,7 @@ System.register(['./leaflet.js', 'lodash', './css/clock-panel.css!', './leaflet.
 
                         var wrap = $("div#wrap-hist-" + mapId);
 
-                        var margin = { top: 0, right: 0, bottom: 0, left: 0 },
+                        var margin = { top: 3, right: 3, bottom: 3, left: 3 },
                             width = +wrap.width() - margin.left - margin.right,
                             height = +wrap.height() - margin.top - margin.bottom,
                             g = hist.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
@@ -616,11 +310,12 @@ System.register(['./leaflet.js', 'lodash', './css/clock-panel.css!', './leaflet.
                         var histogram = d3.histogram().domain(x.domain()).thresholds(x.ticks(nbins));
 
                         var bins = histogram(values);
-                        // Scale the range of the data in the y domain
 
-                        var y = d3.scaleLinear().domain([0, d3.max(bins, function (d) {
+                        var set_y_domain = function set_y_domain(d) {
                             return d.length;
-                        })]).range([height, 0]);
+                        };
+
+                        var y = d3.scaleLinear().domain([0, d3.max(bins, set_y_domain)]).range([height, 0]);
 
                         var div = d3.select("body").append("div").attr("class", "tooltip").style("opacity", 0);
 
@@ -643,9 +338,11 @@ System.register(['./leaflet.js', 'lodash', './css/clock-panel.css!', './leaflet.
                             return c;
                         };
 
-                        bar.append("rect").attr("x", 0).attr("width", x(bins[0].x1) - x(bins[0].x0) - 1).attr("height", function (d) {
+                        var set_height = function set_height(d) {
                             return height - y(d.length);
-                        }).attr("fill", set_fill).on("mouseover", set_mouseover).on("mouseout", set_mouseout);
+                        };
+
+                        bar.append("rect").attr("x", 0).attr("width", x(bins[0].x1) - x(bins[0].x0) - 1).attr("height", set_height).attr("fill", set_fill).on("mouseover", set_mouseover).on("mouseout", set_mouseout);
 
                         var fix = 0.000000000001;
 
@@ -663,10 +360,46 @@ System.register(['./leaflet.js', 'lodash', './css/clock-panel.css!', './leaflet.
                             maxZoom: 20
                         }).addTo(myMap);
 
-                        data = coords.map(function (p) {
-                            return [p.position.lat, p.position.lng, p.value];
+                        function aggregateFun(cluster) {
+                            var val = 0,
+                                childMarkers = cluster.getAllChildMarkers(),
+                                // Store in local variable to avoid having to execute it many times.
+                            total = childMarkers.length;
+                            for (i = 0; i < total; i++) {
+                                val = val + parseInt(childMarkers[i].options.value);
+                            }
+                            var avg = val / total;
+                            avg = Math.round(avg * 10) / 10;
+                            var navg = (avg - min) / max;
+                            return new L.divIcon({
+                                html: "<div style='background-color: " + cmap(navg) + "'><span>" + avg + "</span></div>",
+                                className: ' marker-cluster',
+                                iconSize: new L.point(40, 40)
+                            });
+                        }
+
+                        var markers = L.markerClusterGroup({
+                            iconCreateFunction: aggregateFun,
+                            spiderfyOnMaxZoom: false,
+                            singleMarkerMode: true
+                            //disableClusteringAtZoom: 15
                         });
-                        var heatLayer = L.heatLayer(data, heatOpts).addTo(myMap);
+
+                        //data = coords.map(function (p) { return [p.position.lat, p.position.lng, p.value]; });
+
+                        for (var i = 0; i < coords.length; i++) {
+                            var a = coords[i];
+                            var marker = L.marker(new L.LatLng(a.position.lat, a.position.lng), {
+                                title: a.value,
+                                value: a.value
+                            });
+                            marker.bindPopup(a.value);
+                            markers.addLayer(marker);
+                        }
+
+                        myMap.addLayer(markers);
+
+                        //var heatLayer = L.heatLayer(data, heatOpts).addTo(myMap);
                         //console.log("coords [", metric,"] ", coords.length);
                         syncMaps();
                     });
